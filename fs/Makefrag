@@ -12,6 +12,9 @@ USERAPPS := 		$(OBJDIR)/user/init
 FSIMGTXTFILES :=	fs/newmotd \
 			fs/motd
 
+FSIMGTXTFILES :=	$(FSIMGTXTFILES) \
+			fs/index.html
+
 
 
 FSIMGFILES := $(FSIMGTXTFILES) $(USERAPPS)

@@ -6,7 +6,7 @@
 /jos.cmd
 /.gdbinit
 /wget.log
-/slirp.cap
+/qemu.pcap
 /qemu.out
 /qemu.log
 /lab?-handin.tar.gz

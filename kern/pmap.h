@@ -52,6 +52,7 @@ enum {
 };
 
 void	mem_init(void);
+void	boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm);
 
 void	page_init(void);
 struct Page *page_alloc(int alloc_flags);

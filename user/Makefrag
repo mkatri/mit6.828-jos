@@ -1,6 +1,7 @@
 OBJDIRS += user
 
 USERLIBS = jos
+USERLIBS += lwip
 
 $(OBJDIR)/user/%.o: user/%.c
 	@echo + cc[USER] $<

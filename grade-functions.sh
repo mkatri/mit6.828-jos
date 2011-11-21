@@ -134,7 +134,6 @@ fail () {
 # Usage: runtest <tagname> <defs> <check fn> <check args...>
 runtest () {
 	perl -e "print '$1: '"
-	rm -f obj/kern/init.o obj/kern/kernel obj/kern/kernel.img 
 	[ "$preservefs" = y ] || rm -f obj/fs/fs.img
 	if $verbose
 	then
@@ -143,15 +142,9 @@ runtest () {
 	$make $2 >$out
 	if [ $? -ne 0 ]
 	then
-		rm -f obj/kern/init.o
 		echo $make $2 failed 
 		exit 1
 	fi
-	# We just built a weird init.o that runs a specific test.  As
-	# a result, 'make qemu' will run the last graded test and
-	# 'make clean; make qemu' will run the user-specified
-	# environment.  Remove our weird init.o to fix this.
-	rm -f obj/kern/init.o
 	run
 
 	# Give qemu some more time to run (for asynchronous mode).
@@ -243,7 +236,13 @@ runtest1 () {
 	fi
 	runtest1_defs=
 	while expr "x$1" : 'x-D.*' >/dev/null; do
-		runtest1_defs="DEFS+='$1' $runtest1_defs"
+		if expr "x$1" = 'x-DTEST_NO_NS' >/dev/null; then
+			runtest1_defs="INIT_CFLAGS+='$1' $runtest1_defs"
+		elif expr "x$1" : "x-DTESTOUTPUT_COUNT=*" >/dev/null; then
+			runtest1_defs="NET_CFLAGS+='$1' $runtest1_defs"
+		else
+			runtest1_defs="DEFS+='$1' $runtest1_defs"
+		fi
 		shift
 	done
 	if [ "x$1" = "x-check" ]; then
@@ -251,6 +250,6 @@ runtest1 () {
 		shift
 		shift
 	fi
-	runtest "$tag" "DEFS='-DTEST=${dir}_${prog}' $runtest1_defs" "$check" "$@"
+	runtest "$tag" "INIT_CFLAGS='-DTEST=${dir}_${prog}' $runtest1_defs" "$check" "$@"
 }
 

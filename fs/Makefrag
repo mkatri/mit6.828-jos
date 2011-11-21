@@ -19,7 +19,7 @@ FSIMGTXTFILES :=	$(FSIMGTXTFILES) \
 
 FSIMGFILES := $(FSIMGTXTFILES) $(USERAPPS)
 
-$(OBJDIR)/fs/%.o: fs/%.c fs/fs.h inc/lib.h
+$(OBJDIR)/fs/%.o: fs/%.c fs/fs.h inc/lib.h $(OBJDIR)/.vars.USER_CFLAGS
 	@echo + cc[USER] $<
 	@mkdir -p $(@D)
 	$(V)$(CC) -nostdinc $(USER_CFLAGS) -c -o $@ $<

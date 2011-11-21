@@ -57,12 +57,12 @@ LWIP_SRCFILES += \
 LWIP_OBJFILES := $(patsubst %.c, $(OBJDIR)/%.o, $(LWIP_SRCFILES))
 LWIP_OBJFILES := $(patsubst %.S, $(OBJDIR)/%.o, $(LWIP_OBJFILES))
 
-$(OBJDIR)/net/lwip/%.o: net/lwip/%.c
+$(OBJDIR)/net/lwip/%.o: net/lwip/%.c $(OBJDIR)/.vars.USER_CFLAGS
 	@echo + cc[USER] $<
 	$(V)mkdir -p $(@D)
 	$(V)$(CC) -nostdinc $(USER_CFLAGS) $(USER_INC) -c -o $@ $<
 
-$(OBJDIR)/net/lwip/%.o: net/lwip/%.S
+$(OBJDIR)/net/lwip/%.o: net/lwip/%.S $(OBJDIR)/.vars.USER_CFLAGS
 	@echo + as[USER] $<
 	@mkdir -p $(@D)
 	$(V)$(CC) -nostdinc $(USER_CFLAGS) -c -o $@ $<

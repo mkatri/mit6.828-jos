@@ -10,6 +10,7 @@ if [ x$TCPDUMP = x ]; then
 fi
 
 $make
+sleep 1
 
 rand() {
 	perl -e "my \$r = int(1024 + rand() * (65535 - 1024));print \"\$r\\n\";"
@@ -218,14 +219,12 @@ runtest1 -tag 'pci attach' hello -DTEST_NO_NS \
 	'PCI function 00:03.0 .8086:100e. enabled'
 
 pts=15
-rm -f obj/net/testoutput*
 rm -f qemu.pcap
 runtest1 -tag 'testoutput [5 packets]' -dir net testoutput \
 	-DTEST_NO_NS -DTESTOUTPUT_COUNT=5 \
 	-check check_testoutput 5
 
 pts=10
-rm -f obj/net/testoutput*
 rm -f qemu.pcap
 runtest1 -tag 'testoutput [100 packets]' -dir net testoutput \
 	-DTEST_NO_NS -DTESTOUTPUT_COUNT=100 \

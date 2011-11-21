@@ -5,6 +5,7 @@ qemuopts="-hda obj/kern/kernel.img"
 
 
 $make
+sleep 1
 
 # the [00001000] tags should have [] in them, but that's 
 # a regular expression reserved character, and i'll be damned if

@@ -120,7 +120,15 @@ all:
 KERN_CFLAGS := $(CFLAGS) -DJOS_KERNEL -gstabs
 USER_CFLAGS := $(CFLAGS) -DJOS_USER -gstabs
 
-
+# Update .vars.X if variable X has changed since the last make run.
+#
+# Rules that use variable X should depend on $(OBJDIR)/.vars.X.  If
+# the variable's value has changed, this will update the vars file and
+# force a rebuild of the rule that depends on it.
+$(OBJDIR)/.vars.%: FORCE
+	$(V)echo "$($*)" | cmp -s $@ || echo "$($*)" > $@
+.PRECIOUS: $(OBJDIR)/.vars.%
+.PHONY: FORCE
 
 
 # Include Makefrags for subdirectories
@@ -226,27 +234,21 @@ tarball:
 	git archive --format=tar HEAD | gzip > lab$(LAB)-handin.tar.gz
 
 # For test runs
-prep-net_%: override DEFS+=-DTEST_NO_NS
+prep-net_%: override INIT_CFLAGS+=-DTEST_NO_NS
 
 prep-%:
-	$(V)rm -f $(OBJDIR)/kern/init.o $(IMAGES)
-	$(V)$(MAKE) "DEFS=${DEFS} -DTEST=`case $* in *_*) echo $*;; *) echo user_$*;; esac`" $(IMAGES)
-	$(V)rm -f $(OBJDIR)/kern/init.o
+	$(V)$(MAKE) "INIT_CFLAGS=${INIT_CFLAGS} -DTEST=`case $* in *_*) echo $*;; *) echo user_$*;; esac`" $(IMAGES)
 
-run-%-nox-gdb: pre-qemu
-	$(V)$(MAKE) --no-print-directory prep-$*
+run-%-nox-gdb: prep-% pre-qemu
 	$(QEMU) -nographic $(QEMUOPTS) -S
 
-run-%-gdb: pre-qemu
-	$(V)$(MAKE) --no-print-directory prep-$*
+run-%-gdb: prep-% pre-qemu
 	$(QEMU) $(QEMUOPTS) -S
 
-run-%-nox: pre-qemu
-	$(V)$(MAKE) --no-print-directory prep-$*
+run-%-nox: prep-% pre-qemu
 	$(QEMU) -nographic $(QEMUOPTS)
 
-run-%: pre-qemu
-	$(V)$(MAKE) --no-print-directory prep-$*
+run-%: prep-% pre-qemu
 	$(QEMU) $(QEMUOPTS)
 
 # For network connections

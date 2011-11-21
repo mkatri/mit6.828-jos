@@ -5,6 +5,7 @@ qemuopts="-hda obj/kern/kernel.img"
 
 
 $make
+sleep 1
 
 timeout=10
 E0='07'

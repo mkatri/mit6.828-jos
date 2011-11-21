@@ -5,6 +5,7 @@ qemuopts="-hda obj/kern/kernel.img -hdb obj/fs/fs.img"
 
 
 $make
+sleep 1
 
 qemuopts_orig="$qemuopts"
 qemuopts="$qemuopts -snapshot"

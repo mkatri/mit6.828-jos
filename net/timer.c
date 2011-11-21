@@ -2,14 +2,17 @@
 
 void
 timer(envid_t ns_envid, uint32_t initial_to) {
+	int r;
 	uint32_t stop = sys_time_msec() + initial_to;
 
 	binaryname = "ns_timer";
 
 	while (1) {
-		while(sys_time_msec() < stop) {
+		while((r = sys_time_msec()) < stop && r >= 0) {
 			sys_yield();
 		}
+		if (r < 0)
+			panic("sys_time_msec: %e", r);
 
 		ipc_send(ns_envid, NSREQ_TIMER, 0, 0);
 

@@ -7,4 +7,6 @@
  (shell-mode
   (sh-basic-offset . 8)
   (sh-indentation . 8))
+ (python-mode
+  (indent-tabs-mode . nil))
  )

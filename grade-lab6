@@ -1,0 +1,198 @@
+#!/usr/bin/env python
+
+import os, subprocess, re, threading, socket, time, urllib2, shutil
+from gradelib import *
+
+r = Runner(save("jos.out"),
+           stop_breakpoint("readline"))
+
+def match_packet_seq(got, expect):
+    msgs = []
+    for g, (name, e) in zip(got, expect):
+        if not re.match(e, g):
+            msgs.append("incorrect %s; got:\n%s\nexpected:\n%s" % (name, g, e))
+            break
+    if len(got) < len(expect):
+        msgs.append("first %d packets correct; missing %s" %
+                    (len(got), expect[len(got)][0]))
+    elif len(got) > len(expect):
+        msgs.append("%d extra packet(s):\n%s" %
+                    (len(got) - len(expect), got[len(expect)]))
+    assert not msgs, "\n".join(msgs)
+
+def save_pcap_on_fail():
+    def save_pcap(fail):
+        save_path = "qemu.pcap." + get_current_test().func_name[5:]
+        if fail and os.path.exists("qemu.pcap"):
+            shutil.copyfile("qemu.pcap", save_path)
+            print "    Packet capture saved to %s" % save_path
+        elif not fail and os.path.exists(save_path):
+            os.unlink(save_path)
+            print "    (Old %s failed packet capture deleted)" % save_path
+    get_current_test().on_finish.append(save_pcap)
+
+echo_port = QEMU.get_gdb_port() + 1
+http_port = QEMU.get_gdb_port() + 2
+
+#
+# Basic tests
+#
+
+@test(5)
+def test_testtime():
+    r.user_test("testtime", make_args=["INIT_CFLAGS=-DTEST_NO_NS"])
+    r.match(r'starting count down: 5 4 3 2 1 0 ')
+
+@test(5)
+def test_pci_attach():
+    r.user_test("hello", make_args=["INIT_CFLAGS=-DTEST_NO_NS"])
+    r.match(r'PCI function 00:03.0 \(8086:100e\) enabled')
+
+#
+# testouput
+#
+
+def test_testoutput_helper(count):
+    save_pcap_on_fail()
+
+    maybe_unlink("qemu.pcap")
+    r.user_test("net_testoutput",
+                make_args=["NET_CFLAGS=-DTESTOUTPUT_COUNT=%d" % count])
+
+    # Dump the captured output packets
+    p = subprocess.Popen(["tcpdump", "-XXnr", "qemu.pcap"],
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                         env={"PATH":os.environ["PATH"]+":/usr/sbin:/sbin"})
+    (out, err) = p.communicate()
+    assert not p.returncode, \
+        "tcpdump exited with status %d: %s" % (p.returncode, out)
+
+    # Check the packet capture
+    got = re.findall("((?:^\t[^\n]*\n)+)", out, re.MULTILINE)
+    expect = [("packet %d/%d" % (i+1, count),
+               "\t0x0000:  5061 636b 6574 203%s 3%s                   Packet.%s\n$" % \
+                   (tuple("%02d" % i) + ("%02d" % i,)))
+              for i in range(count)]
+    match_packet_seq(got, expect)
+
+@test(15, "testoutput [5 packets]")
+def test_testoutput_5():
+    test_testoutput_helper(5)
+
+@test(10, "testoutput [100 packets]")
+def test_testoutput_100():
+    test_testoutput_helper(100)
+
+end_part("A")
+
+#
+# testinput
+#
+
+def test_testinput_helper(count):
+    def send_packets():
+        # Send 'count' UDP packets
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.connect(("127.0.0.1", echo_port))
+        for i in range(count):
+            sock.send("Packet %03d" % i)
+    send_thread = threading.Thread(target=send_packets)
+
+    # When we see the final packet, we can stop QEMU
+    digits = "%03d" % (count-1)
+    final = "input: 0030   203%s 3%s3%s" % tuple("%03d" % (count-1))
+
+    r.user_test("net_testinput",
+                call_on_line("Waiting for packets",
+                              lambda _: send_thread.start()),
+                stop_on_line(final))
+    if send_thread.is_alive():
+        send_thread.join()
+
+    # Inspect received packets
+    got = re.findall("(input: 0000   .*?)\n\n", r.qemu.output, re.DOTALL)
+    got = [g.replace("input: ", "") for g in got]
+
+    # ARP reply (QEMU 0.13.0 padded this out to 64 bytes)
+    expect = [("ARP reply", """\
+0000   5254 0012 3456 ....  .... .... 0806 0001
+0010   0800 0604 0002 ....  .... .... 0a00 0202
+0020   5254 0012 3456 0a00  020f 0000 0000 0000
+0030   0000 0000 0000 0000  0000 0000 0000 0000""")]
+    for i in range(count):
+        expect.append(("packet %d/%d" % (i+1, count), """\
+0000   5254 0012 3456 ....  .... .... 0800 4500
+0010   0026 .... 0000 ..11  .... .... .... 0a00
+0020   020f .... 0007 0012  .... 5061 636b 6574
+0030   203%s 3%s3%s 0000 0000  0000 0000""" % tuple("%03d" % i)))
+    match_packet_seq(got, expect)
+
+@test(15, "testinput [5 packets]")
+def test_testinput_5():
+    test_testinput_helper(5)
+
+@test(10, "testinput [100 packets]")
+def test_testinput_100():
+    test_testinput_helper(100)
+
+#
+# Servers
+#
+
+@test(15, "tcp echo server [echosrv]")
+def test_echosrv():
+    def ready(line):
+        expect = "%s: network server works" % time.time()
+        got = ""
+        try:
+            sock = socket.create_connection(("127.0.0.1", echo_port), 5)
+            sock.sendall(expect)
+            while got != expect:
+                data = sock.recv(4096)
+                if not data:
+                    break
+                got += data
+            sock.close()
+        except socket.error, e:
+            got += "[Socket error: %s]" % e
+        assert_equal(got, expect)
+        raise TerminateTest
+
+    save_pcap_on_fail()
+    r.user_test("echosrv", call_on_line("bound", ready))
+    r.match("bound", no=[".*panic"])
+
+@test(0, "web server [httpd]")
+def test_httpd():
+    pass
+
+def mk_test_httpd(url, expect_code, expect_data):
+    fullurl = "http://localhost:%d%s" % (http_port, url)
+    def test_httpd_test():
+        def ready(line):
+            try:
+                res = urllib2.urlopen(fullurl, timeout=5)
+                got = "(Status 200)\n" + res.read()
+            except urllib2.HTTPError, e:
+                got = "(Status %d)" % e.code
+            except IOError, e:
+                got = "(Error: %s)" % e
+            expect = "(Status %d)" % expect_code
+            if expect_data:
+                expect += "\n" + expect_data
+            assert_equal(got, expect)
+            raise TerminateTest
+        save_pcap_on_fail()
+        r.user_test("httpd",
+                    call_on_line('Waiting for http connections', ready))
+        r.match('Waiting for http connections',
+                no=[".*panic"])
+    test_httpd_test.func_name += url.replace("/", "-")
+    return test(10, fullurl, parent=test_httpd)(test_httpd_test)
+mk_test_httpd("/", 404, "")
+mk_test_httpd("/index.html", 200, file("fs/index.html").read())
+mk_test_httpd("/random_file.txt", 404, "")
+
+end_part("B")
+
+run_tests()

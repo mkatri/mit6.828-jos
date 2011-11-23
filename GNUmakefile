@@ -194,7 +194,9 @@ clean:
 	rm -rf $(OBJDIR) .gdbinit jos.in qemu.log
 
 realclean: clean
-	rm -rf lab$(LAB).tar.gz jos.out
+	rm -rf lab$(LAB).tar.gz \
+		jos.out $(wildcard jos.out.*) \
+		qemu.pcap $(wildcard qemu.pcap.*)
 
 distclean: realclean
 	rm -rf conf/gcc.mk
@@ -203,12 +205,11 @@ ifneq ($(V),@)
 GRADEFLAGS += -v
 endif
 
-grade: $(LABSETUP)grade-lab$(LAB).sh
+grade:
 	@echo $(MAKE) clean
 	@$(MAKE) clean || \
 	  (echo "'make clean' failed.  HINT: Do you have another running instance of JOS?" && exit 1)
-	$(MAKE) all
-	sh $(LABSETUP)grade-lab$(LAB).sh $(GRADEFLAGS)
+	./grade-lab$(LAB) $(GRADEFLAGS)
 
 handin: tarball
 	@echo Please visit http://pdos.csail.mit.edu/6.828/submit/

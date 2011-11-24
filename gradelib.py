@@ -299,8 +299,10 @@ class GDBClient(object):
     def __init__(self, port, timeout=15):
         start = time.time()
         while True:
+            self.sock = socket.socket()
             try:
-                self.sock = socket.create_connection(("localhost", port), 1)
+                self.sock.settimeout(1)
+                self.sock.connect(("localhost", port))
                 break
             except socket.error:
                 if time.time() >= start + timeout:
@@ -462,7 +464,7 @@ Failed to shutdown QEMU.  You might need to 'killall qemu' or
         maybe_unlink("obj/kern/init.o", "obj/kern/kernel")
         if kw.pop("snapshot", True):
             kw.setdefault("make_args", []).append("QEMUEXTRA+=-snapshot")
-        self.run_qemu(*monitors, target_base="run-%s" % binary, **kw)
+        self.run_qemu(target_base="run-%s" % binary, *monitors, **kw)
 
     def match(self, *args, **kwargs):
         """Shortcut to call assert_lines_match on the most recent QEMU

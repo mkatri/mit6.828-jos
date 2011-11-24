@@ -34,6 +34,8 @@ def save_pcap_on_fail():
 echo_port = QEMU.get_gdb_port() + 1
 http_port = QEMU.get_gdb_port() + 2
 
+socket.setdefaulttimeout(5)
+
 #
 # Basic tests
 #
@@ -106,7 +108,7 @@ def test_testinput_helper(count):
                 call_on_line("Waiting for packets",
                               lambda _: send_thread.start()),
                 stop_on_line(final))
-    if send_thread.is_alive():
+    if send_thread.isAlive():
         send_thread.join()
 
     # Inspect received packets
@@ -144,17 +146,20 @@ def test_echosrv():
     def ready(line):
         expect = "%s: network server works" % time.time()
         got = ""
+        sock = socket.socket()
         try:
-            sock = socket.create_connection(("127.0.0.1", echo_port), 5)
+            sock.settimeout(5)
+            sock.connect(("127.0.0.1", echo_port))
             sock.sendall(expect)
             while got != expect:
                 data = sock.recv(4096)
                 if not data:
                     break
                 got += data
-            sock.close()
         except socket.error, e:
             got += "[Socket error: %s]" % e
+        finally:
+            sock.close()
         assert_equal(got, expect)
         raise TerminateTest
 
@@ -171,7 +176,8 @@ def mk_test_httpd(url, expect_code, expect_data):
     def test_httpd_test():
         def ready(line):
             try:
-                res = urllib2.urlopen(fullurl, timeout=5)
+                # This uses the default socket timeout (5 seconds)
+                res = urllib2.urlopen(fullurl)
                 got = "(Status 200)\n" + res.read()
             except urllib2.HTTPError, e:
                 got = "(Status %d)" % e.code

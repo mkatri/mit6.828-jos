@@ -13,7 +13,7 @@ def match_packet_seq(got, expect):
             msgs.append("incorrect %s; got:\n%s\nexpected:\n%s" % (name, g, e))
             break
     if len(got) < len(expect):
-        msgs.append("first %d packets correct; missing %s" %
+        msgs.append("only received %d packets; missing %s" %
                     (len(got), expect[len(got)][0]))
     elif len(got) > len(expect):
         msgs.append("%d extra packet(s):\n%s" %
@@ -92,6 +92,9 @@ end_part("A")
 #
 
 def test_testinput_helper(count):
+    save_pcap_on_fail()
+    maybe_unlink("qemu.pcap")
+
     def send_packets():
         # Send 'count' UDP packets
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

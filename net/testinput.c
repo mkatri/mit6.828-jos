@@ -68,7 +68,7 @@ void
 umain(int argc, char **argv)
 {
 	envid_t ns_envid = sys_getenvid();
-	int i, r;
+	int i, r, first = 1;
 
 	binaryname = "testinput";
 
@@ -91,7 +91,6 @@ umain(int argc, char **argv)
 	cprintf("Sending ARP announcement...\n");
 	announce();
 
-	cprintf("Waiting for packets...\n");
 	while (1) {
 		envid_t whom;
 		int perm;
@@ -106,5 +105,11 @@ umain(int argc, char **argv)
 
 		hexdump("input: ", pkt->jp_data, pkt->jp_len);
 		cprintf("\n");
+
+		// Only indicate that we're waiting for packets once
+		// we've received the ARP reply
+		if (first)
+			cprintf("Waiting for packets...\n");
+		first = 0;
 	}
 }

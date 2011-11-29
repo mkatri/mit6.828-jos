@@ -1,24 +1,35 @@
 #!/usr/bin/env python
 
-import os, subprocess, re, threading, socket, time, urllib2, shutil
+import os, re, threading, socket, time, urllib2, shutil, struct, difflib
 from gradelib import *
 
 r = Runner(save("jos.out"),
            stop_breakpoint("readline"))
 
 def match_packet_seq(got, expect):
-    msgs = []
-    for g, (name, e) in zip(got, expect):
-        if not re.match(e, g):
-            msgs.append("incorrect %s; got:\n%s\nexpected:\n%s" % (name, g, e))
-            break
-    if len(got) < len(expect):
-        msgs.append("only received %d packets; missing %s" %
-                    (len(got), expect[len(got)][0]))
-    elif len(got) > len(expect):
-        msgs.append("%d extra packet(s):\n%s" %
-                    (len(got) - len(expect), got[len(expect)]))
-    assert not msgs, "\n".join(msgs)
+    s = difflib.SequenceMatcher(None, got, [d for n, d in expect])
+    msgs, bad = [], False
+    for tag, i1, i2, j1, j2 in s.get_opcodes():
+        if tag in ("delete", "replace"):
+            bad = True
+            for i in range(i1, min(i2, i1 + 3)):
+                msgs.append(color("red", "unexpected packet:") +
+                            "\n%s" % hexdump(got[i]))
+            if i != i2 - 1:
+                msgs.append("... plus %d more" % (i2 - i - 1))
+        range_msg = None
+        if tag in ("insert", "replace"):
+            bad = True
+            range_msg = color("red", "missing")
+        if tag == "equal":
+            range_msg = color("green", "got")
+        if range_msg:
+            if j1 + 1 == j2:
+                msgs.append("%s %s" % (range_msg, expect[j1][0]))
+            else:
+                msgs.append("%s %s through %s" %
+                            (range_msg, expect[j1][0], expect[j2 - 1][0]))
+    assert not bad, "\n".join(msgs)
 
 def save_pcap_on_fail():
     def save_pcap(fail):
@@ -30,6 +41,30 @@ def save_pcap_on_fail():
             os.unlink(save_path)
             print "    (Old %s failed packet capture deleted)" % save_path
     get_current_test().on_finish.append(save_pcap)
+
+def read_pcap():
+    f = file("qemu.pcap")
+    s = struct.Struct("=IHHiIII")
+    hdr = s.unpack(f.read(s.size))
+    assert_equal(hdr[0], 0xa1b2c3d4, "Bad pcap magic number")
+    assert_equal((hdr[1], hdr[2]), (2, 4), "Bad pcap version number")
+    s = struct.Struct("=iiII")
+    while True:
+        hdr_data = f.read(s.size)
+        if not len(hdr_data):
+            return
+        hdr = s.unpack(hdr_data)
+        yield f.read(hdr[2])
+
+def hexdump(data):
+    buf = []
+    for i in range(0, len(data), 16):
+        chunk = data[i:i+16]
+        hd = "".join("%02x" % ord(b) for b in chunk)
+        hd = " ".join(hd[j:j+4] for j in range(0, len(hd), 4))
+        ad = "".join(c if c.isalnum() else "." for c in chunk)
+        buf.append("%04x   %-40s  %s" % (i, hd, ad))
+    return "\n".join(buf)
 
 echo_port = QEMU.get_gdb_port() + 1
 http_port = QEMU.get_gdb_port() + 2
@@ -61,19 +96,9 @@ def test_testoutput_helper(count):
     r.user_test("net_testoutput",
                 make_args=["NET_CFLAGS=-DTESTOUTPUT_COUNT=%d" % count])
 
-    # Dump the captured output packets
-    p = subprocess.Popen(["tcpdump", "-XXnr", "qemu.pcap"],
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                         env={"PATH":os.environ["PATH"]+":/usr/sbin:/sbin"})
-    (out, err) = p.communicate()
-    assert not p.returncode, \
-        "tcpdump exited with status %d: %s" % (p.returncode, out)
-
     # Check the packet capture
-    got = re.findall("((?:^\t[^\n]*\n)+)", out, re.MULTILINE)
-    expect = [("packet %d/%d" % (i+1, count),
-               "\t0x0000:  5061 636b 6574 203%s 3%s                   Packet.%s\n$" % \
-                   (tuple("%02d" % i) + ("%02d" % i,)))
+    got = list(read_pcap())
+    expect = [("packet %d/%d" % (i+1, count), "Packet %02d" % i)
               for i in range(count)]
     match_packet_seq(got, expect)
 
@@ -114,23 +139,25 @@ def test_testinput_helper(count):
     if send_thread.isAlive():
         send_thread.join()
 
-    # Inspect received packets
+    # Parse testinput hexdumps for received packets
     got = re.findall("(input: 0000   .*?)\n\n", r.qemu.output, re.DOTALL)
-    got = [g.replace("input: ", "") for g in got]
+    got = [re.sub("[ \n]+", "", re.sub("input: .{4}", "", g)) for g in got]
+    got = ["".join(chr(int(g[i:i+2], 16)) for i in range(0, len(g), 2))
+           for g in got]
 
-    # ARP reply (QEMU 0.13.0 padded this out to 64 bytes)
-    expect = [("ARP reply", """\
-0000   5254 0012 3456 ....  .... .... 0806 0001
-0010   0800 0604 0002 ....  .... .... 0a00 0202
-0020   5254 0012 3456 0a00  020f 0000 0000 0000
-0030   0000 0000 0000 0000  0000 0000 0000 0000""")]
-    for i in range(count):
-        expect.append(("packet %d/%d" % (i+1, count), """\
-0000   5254 0012 3456 ....  .... .... 0800 4500
-0010   0026 .... 0000 ..11  .... .... .... 0a00
-0020   020f .... 0007 0012  .... 5061 636b 6574
-0030   203%s 3%s3%s 0000 0000  0000 0000""" % tuple("%03d" % i)))
-    match_packet_seq(got, expect)
+    # Get the packets QEMU actually received, since there's some
+    # header information we can't easily guess.
+    pcap = list(read_pcap())
+    if len(pcap) != count + 2:
+        raise RuntimeError("pcap contains only %d packets" % len(pcap))
+    # Strip transmitted ARP request
+    assert pcap.pop(0)[:6] == "\xff" * 6, "First packet is not ARP request"
+    # The E1000 pads packets out to a 60 byte frame
+    pcap = [pkt.ljust(60, "\0") for pkt in pcap]
+
+    names = ["ARP reply"] + ["packet %d/%d" % (i+1, count)
+                             for i in range(count)]
+    match_packet_seq(got, zip(names, pcap))
 
 @test(15, "testinput [5 packets]")
 def test_testinput_5():

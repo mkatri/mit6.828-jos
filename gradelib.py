@@ -189,7 +189,7 @@ def assert_lines_match(text, *regexps, **kw):
 # Utilities
 #
 
-__all__ += ["make", "maybe_unlink", "reset_fs"]
+__all__ += ["make", "maybe_unlink", "reset_fs", "color"]
 
 MAKE_TIMESTAMP = 0
 

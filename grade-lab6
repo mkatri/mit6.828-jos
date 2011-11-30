@@ -140,10 +140,13 @@ def test_testinput_helper(count):
         send_thread.join()
 
     # Parse testinput hexdumps for received packets
-    got = re.findall("(input: 0000   .*?)\n\n", r.qemu.output, re.DOTALL)
-    got = [re.sub("[ \n]+", "", re.sub("input: .{4}", "", g)) for g in got]
-    got = ["".join(chr(int(g[i:i+2], 16)) for i in range(0, len(g), 2))
-           for g in got]
+    got = []
+    for off, dump in re.findall("input: ([0-9a-f]{4})   ([0-9a-f ]*)\n",
+                                r.qemu.output):
+        if off == "0000" or not got:
+            got.append("")
+        got[-1] += re.sub("[0-9a-f]{2}", lambda m: chr(int(m.group(), 16)),
+                          dump.replace(" ", ""))
 
     # Get the packets QEMU actually received, since there's some
     # header information we can't easily guess.

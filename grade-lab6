@@ -10,25 +10,22 @@ def match_packet_seq(got, expect):
     s = difflib.SequenceMatcher(None, got, [d for n, d in expect])
     msgs, bad = [], False
     for tag, i1, i2, j1, j2 in s.get_opcodes():
+        wrong = []
         if tag in ("delete", "replace"):
-            bad = True
-            for i in range(i1, min(i2, i1 + 3)):
-                msgs.append(color("red", "unexpected packet:") +
-                            "\n%s" % hexdump(got[i]))
-            if i != i2 - 1:
-                msgs.append("... plus %d more" % (i2 - i - 1))
-        range_msg = None
+            wrong.append([("unexpected packet:", pkt) for pkt in got[i1:i2]])
         if tag in ("insert", "replace"):
+            wrong.append([("missing %s:" % n, pkt) for n, pkt in expect[j1:j2]])
+        for seq in wrong:
             bad = True
-            range_msg = color("red", "missing")
+            for msg, pkt in seq[:3]:
+                msgs.append(color("red", msg) + "\n" + hexdump(pkt))
+            if seq[3:]:
+                msgs.append("... plus %d more" % len(seq[3:]))
+
         if tag == "equal":
-            range_msg = color("green", "got")
-        if range_msg:
-            if j1 + 1 == j2:
-                msgs.append("%s %s" % (range_msg, expect[j1][0]))
-            else:
-                msgs.append("%s %s through %s" %
-                            (range_msg, expect[j1][0], expect[j2 - 1][0]))
+            msgs.append(color("green", "got ") + expect[j1][0])
+            if j1 + 1 < j2:
+                msgs[-1] += " through " + expect[j2 - 1][0]
     assert not bad, "\n".join(msgs)
 
 def save_pcap_on_fail():

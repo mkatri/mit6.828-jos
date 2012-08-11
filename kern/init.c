@@ -36,8 +36,9 @@ i386_init(void)
 
 	// Lab 2 memory management initialization functions
 	mem_init();
-
+	
 	// Lab 3 user environment initialization functions
+	
 	env_init();
 	trap_init();
 
@@ -69,6 +70,7 @@ i386_init(void)
 
 	// Schedule and run the first user environment!
 	sched_yield();
+
 }
 
 // While boot_aps is booting a given CPU, it communicates the per-core

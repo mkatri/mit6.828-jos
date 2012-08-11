@@ -68,4 +68,5 @@ struct Env {
 	int env_ipc_perm;		// Perm of page mapping received
 };
 
+#define ENVSIZE		sizeof(struct Env)
 #endif // !JOS_INC_ENV_H

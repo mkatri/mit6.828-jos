@@ -56,4 +56,5 @@ struct Env {
 	pde_t *env_pgdir;		// Kernel virtual address of page dir
 };
 
+#define ENVSIZE		sizeof(struct Env)
 #endif // !JOS_INC_ENV_H

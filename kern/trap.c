@@ -25,7 +25,6 @@ struct Pseudodesc idt_pd = {
 	sizeof(idt) - 1, (uint32_t) idt
 };
 
-
 static const char *trapname(int trapno)
 {
 	static const char * const excnames[] = {
@@ -63,9 +62,32 @@ void
 trap_init(void)
 {
 	extern struct Segdesc gdt[];
-
+	
 	// LAB 3: Your code here.
+	
+	SETGATE(idt[T_DIVIDE], 1, GD_KT, _zero_exc, 3);	
+	SETGATE(idt[T_DEBUG], 1, GD_KT, _debug_exc, 3);	
+	SETGATE(idt[T_NMI], 1, GD_KT, _nmi_exc, 3);	
+	SETGATE(idt[T_BRKPT], 1, GD_KT, _brkpt_exc, 3);	
+	SETGATE(idt[T_OFLOW], 1, GD_KT, _oflow_exc, 3);	
+	SETGATE(idt[T_BOUND], 1, GD_KT, _bound_exc, 3);	
+	SETGATE(idt[T_ILLOP], 1, GD_KT, _illop_exc, 3);	
+	SETGATE(idt[T_DEVICE], 1, GD_KT, _device_exc, 3);	
 
+	SETGATE(idt[T_DBLFLT], 1, GD_KT, _dblflt_exc, 3);	
+	SETGATE(idt[T_TSS], 1, GD_KT, _tss_exc, 3);	
+	SETGATE(idt[T_SEGNP], 1, GD_KT, _segnp_exc, 3);	
+	SETGATE(idt[T_STACK], 1, GD_KT, _stack_exc, 3);	
+	SETGATE(idt[T_GPFLT], 1, GD_KT, _gpflt_exc, 3);	
+	SETGATE(idt[T_PGFLT], 1, GD_KT, _pgflt_exc, 0);	
+	SETGATE(idt[T_FPERR], 1, GD_KT, _fperr_exc, 3);	
+	SETGATE(idt[T_ALIGN], 1, GD_KT, _aligh_exc, 3);	
+	SETGATE(idt[T_MCHK], 1, GD_KT, _mchk_exc, 3);	
+	SETGATE(idt[T_SIMDERR], 1, GD_KT, _simderr_exc, 3);	
+
+	SETGATE(idt[T_SYSCALL], 1, GD_KT, _syscall_exc, 3);	
+	SETGATE(idt[T_DEFAULT], 1, GD_KT, _default_exc, 3);		
+	
 	// Per-CPU setup 
 	trap_init_percpu();
 }
@@ -143,15 +165,33 @@ trap_dispatch(struct Trapframe *tf)
 {
 	// Handle processor exceptions.
 	// LAB 3: Your code here.
-
-	// Unexpected trap: The user process or the kernel has a bug.
-	print_trapframe(tf);
-	if (tf->tf_cs == GD_KT)
-		panic("unhandled trap in kernel");
-	else {
-		env_destroy(curenv);
+	switch(tf->tf_trapno){
+	case T_PGFLT:
+		page_fault_handler(tf);
 		return;
+	case T_SYSCALL:
+		tf->tf_regs.reg_eax = syscall(tf->tf_regs.reg_eax,
+						tf->tf_regs.reg_edx,
+						tf->tf_regs.reg_ecx,
+						tf->tf_regs.reg_ebx,
+						tf->tf_regs.reg_edi,
+						tf->tf_regs.reg_esi);
+		return;
+	case T_BRKPT:
+		while (1)
+			monitor(tf);
+		break;
+	default:
+		// Unexpected trap: The user process or the kernel has a bug.
+		print_trapframe(tf);
+		if (tf->tf_cs == GD_KT)
+			panic("unhandled trap in kernel");
+		else {
+			env_destroy(curenv);
+			return;
+		}		
 	}
+	
 }
 
 void

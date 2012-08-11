@@ -47,9 +47,44 @@
  * Lab 3: Your code here for generating entry points for the different traps.
  */
 
+TRAPHANDLER_NOEC(_zero_exc, T_DIVIDE)
+TRAPHANDLER_NOEC(_debug_exc, T_DEBUG)
+TRAPHANDLER_NOEC(_nmi_exc, T_NMI)
+TRAPHANDLER_NOEC(_brkpt_exc, T_BRKPT)
+TRAPHANDLER_NOEC(_oflow_exc, T_OFLOW)
+TRAPHANDLER_NOEC(_bound_exc, T_BOUND)
+TRAPHANDLER_NOEC(_illop_exc, T_ILLOP)
+TRAPHANDLER_NOEC(_device_exc, T_DEVICE)
 
+TRAPHANDLER(_dblflt_exc, T_DBLFLT)
+TRAPHANDLER(_tss_exc, T_TSS)
+TRAPHANDLER(_segnp_exc, T_SEGNP)
+TRAPHANDLER(_stack_exc, T_STACK)
+TRAPHANDLER(_gpflt_exc, T_GPFLT)
+TRAPHANDLER(_pgflt_exc, T_PGFLT)
+TRAPHANDLER(_fperr_exc, T_FPERR)
+TRAPHANDLER(_aligh_exc, T_ALIGN)
+TRAPHANDLER(_mchk_exc, T_MCHK)
+TRAPHANDLER(_simderr_exc, T_SIMDERR)
+
+TRAPHANDLER_NOEC(_syscall_exc, T_SYSCALL)
+TRAPHANDLER_NOEC(_default_exc, T_DEFAULT)
 
 /*
  * Lab 3: Your code here for _alltraps
  */
-
+_alltraps:
+	pushl	%ds
+	pushl	%es
+	pushal
+	mov	$GD_KD, %al
+	mov	%eax, %es
+	mov	%eax, %ds
+	pushl	%esp
+	call	trap
+	popl	%esp
+	popal
+	popl	%es
+	popl	%ds
+	addl	$0x8, %esp
+	iret

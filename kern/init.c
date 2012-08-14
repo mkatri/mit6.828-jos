@@ -37,8 +37,7 @@ i386_init(void)
 	// Lab 2 memory management initialization functions
 	mem_init();
 	
-	// Lab 3 user environment initialization functions
-	
+	// Lab 3 user environment initialization functions	
 	env_init();
 	trap_init();
 
@@ -57,7 +56,7 @@ i386_init(void)
 
 	// Should always have idle processes at first.
 	int i;
-	for (i = 0; i < NCPU; i++)
+	for (i = 0; i < ncpu; i++)
 		ENV_CREATE(user_idle, ENV_TYPE_IDLE);
 
 #if defined(TEST)

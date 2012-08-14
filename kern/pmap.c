@@ -205,7 +205,7 @@ mem_init(void)
 	// we just set up the mapping anyway.
 	// Permissions: kernel RW, user NONE
 	// Your code goes here:
-	boot_map_region(kern_pgdir, KERNBASE, (~0) - KERNBASE, 0, PTE_W);
+	boot_map_region(kern_pgdir, KERNBASE, -KERNBASE, 0, PTE_W);
 
 	// Initialize the SMP-related parts of the memory map
 	mem_init_mp();
@@ -246,7 +246,7 @@ mem_init_mp(void)
 	// Create a direct mapping at the top of virtual address space starting
 	// at IOMEMBASE for accessing the LAPIC unit using memory-mapped I/O.
 	boot_map_region(kern_pgdir, IOMEMBASE, -IOMEMBASE, IOMEM_PADDR, PTE_W);
-
+	assert(check_va2pa(kern_pgdir, IOMEMBASE) == IOMEM_PADDR);
 	// Map per-CPU stacks starting at KSTACKTOP, for up to 'NCPU' CPUs.
 	//
 	// For CPU i, use the physical memory that 'percpu_kstacks[i]' refers
@@ -263,7 +263,13 @@ mem_init_mp(void)
 	//     Permissions: kernel RW, user NONE
 	//
 	// LAB 4: Your code here:
-
+	
+	int i;
+	for(i = 0; i < NCPU; i++){
+		uintptr_t va = KSTACKTOP - (i + 1)*KSTKSIZE - i*KSTKGAP;
+		boot_map_region(kern_pgdir, va, KSTKSIZE, PADDR(percpu_kstacks[i]), PTE_W); 
+	}
+	
 }
 
 		
@@ -305,7 +311,9 @@ page_init(void)
 	// free pages!
 	size_t i;
 	for (i = 0; i < npages; i++) {		
-		if(i == 0 || (i*PGSIZE >= IOPHYSMEM && i*PGSIZE < EXTPHYSMEM)){
+		if(i == 0 
+		|| (i*PGSIZE >= IOPHYSMEM && i*PGSIZE < EXTPHYSMEM)
+		|| (i*PGSIZE == MPENTRY_PADDR)){
 			pages[i].pp_ref = 1;
 		}else if(i*PGSIZE >= EXTPHYSMEM && i*PGSIZE < PADDR(nextfree)){
 			pages[i].pp_ref = 1;
@@ -417,6 +425,8 @@ static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
 	uintptr_t limit = va+size;
+	limit = (limit == 0)?(~0):(limit);
+	uintptr_t ova = va;
 	while(va < limit){
 		pte_t* pgte = pgdir_walk(pgdir, (void *)va, 1);
 		*pgte = perm | PTE_P | (pa - PGOFF(va));
@@ -754,15 +764,20 @@ check_kern_pgdir(void)
 
 	// check IO mem (new in lab 4)
 	for (i = IOMEMBASE; i < -PGSIZE; i += PGSIZE)
-		assert(check_va2pa(pgdir, i) == i);
+		assert(check_va2pa(pgdir, i) == i);	
 
 	// check kernel stack
 	// (updated in lab 4 to check per-CPU kernel stacks)
 	for (n = 0; n < NCPU; n++) {
 		uint32_t base = KSTACKTOP - (KSTKSIZE + KSTKGAP) * (n + 1);
-		for (i = 0; i < KSTKSIZE; i += PGSIZE)
+		for (i = 0; i < KSTKSIZE; i += PGSIZE){
+			if(check_va2pa(pgdir, base + KSTKGAP + i) != PADDR(percpu_kstacks[n]) + i){
+				panic("n: %x, %x maps to %x instead of %x\n", n, base + KSTKGAP + i,
+				check_va2pa(pgdir, base + KSTKGAP + i), PADDR(percpu_kstacks[n]) + i);
+			}
 			assert(check_va2pa(pgdir, base + KSTKGAP + i)
 				== PADDR(percpu_kstacks[n]) + i);
+		}
 		for (i = 0; i < KSTKGAP; i += PGSIZE)
 			assert(check_va2pa(pgdir, base + i) == ~0);
 	}

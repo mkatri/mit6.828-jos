@@ -140,7 +140,7 @@ trap_init_percpu(void)
 
 	// Load the TSS selector (like other segment selectors, the
 	// bottom three bits are special; we leave them 0)
-	ltr(GD_TSS0);
+	ltr((((GD_TSS0 >> 3) + cpuid) << 3) | (GD_TSS0 & 0x7));
 
 	// Load the IDT
 	lidt(&idt_pd);

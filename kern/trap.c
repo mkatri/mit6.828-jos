@@ -1,6 +1,7 @@
 #include <inc/mmu.h>
 #include <inc/x86.h>
 #include <inc/assert.h>
+#include <inc/string.h>
 
 #include <kern/pmap.h>
 #include <kern/trap.h>
@@ -283,7 +284,7 @@ trap(struct Trapframe *tf)
 	// Record that tf is the last real trapframe so
 	// print_trapframe can print some additional information.
 	last_tf = tf;
-
+	
 	// Dispatch based on what type of trap occurred
 	trap_dispatch(tf);
 
@@ -308,8 +309,10 @@ page_fault_handler(struct Trapframe *tf)
 	// Handle kernel-mode page faults.
 
 	// LAB 3: Your code here.
-	if((tf->tf_cs & 0xFF) == GD_KT)
+	if((tf->tf_cs & 0xFF) == GD_KT){
+		print_trapframe(tf);
 		panic("page fault in kernal at %x\n", fault_va);
+	}
 
 	// We've already handled kernel-mode exceptions, so if we get here,
 	// the page fault happened in user mode.
@@ -343,11 +346,32 @@ page_fault_handler(struct Trapframe *tf)
 	//   (the 'tf' variable points at 'curenv->env_tf').
 
 	// LAB 4: Your code here.
+	if(curenv->env_pgfault_upcall == NULL){
 
-	// Destroy the environment that caused the fault.
-	cprintf("[%08x] user fault va %08x ip %08x\n",
-		curenv->env_id, fault_va, tf->tf_eip);
-	print_trapframe(tf);
-	env_destroy(curenv);
+		// Destroy the environment that caused the fault.
+		cprintf("[%08x] user fault va %08x ip %08x\n",
+			curenv->env_id, fault_va, tf->tf_eip);
+		print_trapframe(tf);
+		env_destroy(curenv);
+	}
+
+	uintptr_t stacktop = 
+		(tf->tf_esp > UXSTACKTOP - PGSIZE && tf->tf_esp < UXSTACKTOP)?
+			(tf->tf_esp-4):(UXSTACKTOP);
+	user_mem_assert(curenv, 
+		(void *) (stacktop - sizeof(struct UTrapframe)),
+		sizeof(struct UTrapframe), PTE_U | PTE_W);
+	struct UTrapframe utf;
+	utf.utf_fault_va = fault_va;
+	utf.utf_err = tf->tf_err;
+	utf.utf_regs = tf->tf_regs;
+	utf.utf_eip = tf->tf_eip;
+	utf.utf_eflags = tf->tf_eflags;
+	utf.utf_esp = tf->tf_esp;
+		
+	tf->tf_esp = stacktop - sizeof(utf);
+	tf->tf_eip = (uintptr_t) curenv->env_pgfault_upcall;
+	memmove((void *) tf->tf_esp, &utf, sizeof(utf));
+	env_run(curenv);
 }
 

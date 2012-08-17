@@ -522,7 +522,7 @@ page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 void
 page_remove(pde_t *pgdir, void *va)
 {
-	pte_t *pgte = (pte_t *)1;
+	pte_t *pgte;
 	struct Page *p = page_lookup(pgdir, va, &pgte);
 	if(p != NULL){
 		page_decref(p);

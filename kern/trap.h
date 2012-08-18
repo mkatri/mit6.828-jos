@@ -43,4 +43,20 @@ extern char _simderr_exc[];
 extern char _syscall_exc[];
 extern char _default_exc[];
 
+extern char _irq_0[];
+extern char _irq_1[];
+extern char _irq_2[];
+extern char _irq_3[];
+extern char _irq_4[];
+extern char _irq_5[];
+extern char _irq_6[];
+extern char _irq_7[];
+extern char _irq_8[];
+extern char _irq_9[];
+extern char _irq_10[];
+extern char _irq_11[];
+extern char _irq_12[];
+extern char _irq_13[];
+extern char _irq_14[];
+extern char _irq_15[];
 #endif /* JOS_KERN_TRAP_H */

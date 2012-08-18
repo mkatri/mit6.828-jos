@@ -105,12 +105,11 @@ envid_t
 fork(void)
 {
 	// LAB 4: Your code here.
+	set_pgfault_handler(&pgfault); 
 	envid_t child = sys_exofork();
 	if(child < 0)
 		return child;
 
-	set_pgfault_handler(&pgfault); //before copying, set pgfault handler for both
-	
 	if(child == 0){
 		thisenv = &envs[ENVX(sys_getenvid())];
 		return 0;

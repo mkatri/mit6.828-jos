@@ -72,29 +72,45 @@ trap_init(void)
 	
 	// LAB 3: Your code here.
 	
-	SETGATE(idt[T_DIVIDE], 1, GD_KT, _zero_exc, 3);	
-	SETGATE(idt[T_DEBUG], 1, GD_KT, _debug_exc, 3);	
-	SETGATE(idt[T_NMI], 1, GD_KT, _nmi_exc, 3);	
-	SETGATE(idt[T_BRKPT], 1, GD_KT, _brkpt_exc, 3);	
-	SETGATE(idt[T_OFLOW], 1, GD_KT, _oflow_exc, 3);	
-	SETGATE(idt[T_BOUND], 1, GD_KT, _bound_exc, 3);	
-	SETGATE(idt[T_ILLOP], 1, GD_KT, _illop_exc, 3);	
-	SETGATE(idt[T_DEVICE], 1, GD_KT, _device_exc, 3);	
+	SETGATE(idt[T_DIVIDE], 0, GD_KT, _zero_exc, 3);	
+	SETGATE(idt[T_DEBUG], 0, GD_KT, _debug_exc, 3);	
+	SETGATE(idt[T_NMI], 0, GD_KT, _nmi_exc, 3);	
+	SETGATE(idt[T_BRKPT], 0, GD_KT, _brkpt_exc, 3);	
+	SETGATE(idt[T_OFLOW], 0, GD_KT, _oflow_exc, 3);	
+	SETGATE(idt[T_BOUND], 0, GD_KT, _bound_exc, 3);	
+	SETGATE(idt[T_ILLOP], 0, GD_KT, _illop_exc, 3);	
+	SETGATE(idt[T_DEVICE], 0, GD_KT, _device_exc, 3);	
 
-	SETGATE(idt[T_DBLFLT], 1, GD_KT, _dblflt_exc, 3);	
-	SETGATE(idt[T_TSS], 1, GD_KT, _tss_exc, 3);	
-	SETGATE(idt[T_SEGNP], 1, GD_KT, _segnp_exc, 3);	
-	SETGATE(idt[T_STACK], 1, GD_KT, _stack_exc, 3);	
-	SETGATE(idt[T_GPFLT], 1, GD_KT, _gpflt_exc, 3);	
-	SETGATE(idt[T_PGFLT], 1, GD_KT, _pgflt_exc, 0);	
-	SETGATE(idt[T_FPERR], 1, GD_KT, _fperr_exc, 3);	
-	SETGATE(idt[T_ALIGN], 1, GD_KT, _aligh_exc, 3);	
-	SETGATE(idt[T_MCHK], 1, GD_KT, _mchk_exc, 3);	
-	SETGATE(idt[T_SIMDERR], 1, GD_KT, _simderr_exc, 3);	
+	SETGATE(idt[T_DBLFLT], 0, GD_KT, _dblflt_exc, 3);	
+	SETGATE(idt[T_TSS], 0, GD_KT, _tss_exc, 3);	
+	SETGATE(idt[T_SEGNP], 0, GD_KT, _segnp_exc, 3);	
+	SETGATE(idt[T_STACK], 0, GD_KT, _stack_exc, 3);	
+	SETGATE(idt[T_GPFLT], 0, GD_KT, _gpflt_exc, 3);	
+	SETGATE(idt[T_PGFLT], 0, GD_KT, _pgflt_exc, 0);	
+	SETGATE(idt[T_FPERR], 0, GD_KT, _fperr_exc, 3);	
+	SETGATE(idt[T_ALIGN], 0, GD_KT, _aligh_exc, 3);	
+	SETGATE(idt[T_MCHK], 0, GD_KT, _mchk_exc, 3);	
+	SETGATE(idt[T_SIMDERR], 0, GD_KT, _simderr_exc, 3);	
 
-	SETGATE(idt[T_SYSCALL], 1, GD_KT, _syscall_exc, 3);	
-	SETGATE(idt[T_DEFAULT], 1, GD_KT, _default_exc, 3);		
+	SETGATE(idt[T_SYSCALL], 0, GD_KT, _syscall_exc, 3);	
+	SETGATE(idt[T_DEFAULT], 0, GD_KT, _default_exc, 3);		
 	
+	SETGATE(idt[IRQ_OFFSET + 0], 0, GD_KT, _irq_0, 3);		
+	SETGATE(idt[IRQ_OFFSET + 1], 0, GD_KT, _irq_1, 0);		
+	SETGATE(idt[IRQ_OFFSET + 2], 0, GD_KT, _irq_2, 0);		
+	SETGATE(idt[IRQ_OFFSET + 3], 0, GD_KT, _irq_3, 0);		
+	SETGATE(idt[IRQ_OFFSET + 4], 0, GD_KT, _irq_4, 0);		
+	SETGATE(idt[IRQ_OFFSET + 5], 0, GD_KT, _irq_5, 0);		
+	SETGATE(idt[IRQ_OFFSET + 6], 0, GD_KT, _irq_6, 0);		
+	SETGATE(idt[IRQ_OFFSET + 7], 0, GD_KT, _irq_7, 0);		
+	SETGATE(idt[IRQ_OFFSET + 8], 0, GD_KT, _irq_8, 0);		
+	SETGATE(idt[IRQ_OFFSET + 9], 0, GD_KT, _irq_9, 0);		
+	SETGATE(idt[IRQ_OFFSET + 10], 0, GD_KT, _irq_10, 0);		
+	SETGATE(idt[IRQ_OFFSET + 11], 0, GD_KT, _irq_11, 0);		
+	SETGATE(idt[IRQ_OFFSET + 12], 0, GD_KT, _irq_12, 0);		
+	SETGATE(idt[IRQ_OFFSET + 13], 0, GD_KT, _irq_13, 0);		
+	SETGATE(idt[IRQ_OFFSET + 14], 0, GD_KT, _irq_14, 0);		
+	SETGATE(idt[IRQ_OFFSET + 15], 0, GD_KT, _irq_15, 0);		
 	// Per-CPU setup 
 	trap_init_percpu();
 }
@@ -178,6 +194,7 @@ print_trapframe(struct Trapframe *tf)
 		cprintf("  esp  0x%08x\n", tf->tf_esp);
 		cprintf("  ss   0x----%04x\n", tf->tf_ss);
 	}
+	cprintf("trap caused by env [%08x]\n", (curenv)?(curenv->env_id):(0));
 }
 
 void
@@ -213,6 +230,10 @@ trap_dispatch(struct Trapframe *tf)
 	// LAB 4: Your code here.
 
 	switch(tf->tf_trapno){
+	case IRQ_OFFSET + IRQ_TIMER:
+		lapic_eoi();
+		sched_yield();
+		return;
 	case T_PGFLT:
 		page_fault_handler(tf);
 		return;
@@ -234,6 +255,7 @@ trap_dispatch(struct Trapframe *tf)
 		if (tf->tf_cs == GD_KT)
 			panic("unhandled trap in kernel");
 		else {
+			cprintf("unhandled trap in userland\n");
 			env_destroy(curenv);
 			return;
 		}		

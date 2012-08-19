@@ -26,7 +26,7 @@ va_is_dirty(void *va)
 
 // Fault any disk block that is read or written in to memory by
 // loading it from disk.
-// Hint: Use ide_read and BLKSECTS.
+// Hint: Use ide_read and gc.
 static void
 bc_pgfault(struct UTrapframe *utf)
 {
@@ -49,8 +49,17 @@ bc_pgfault(struct UTrapframe *utf)
 	// the page dirty).
 	//
 	// LAB 5: Your code here
-	panic("bc_pgfault not implemented");
+	addr = (void *)(((uintptr_t)addr)&(~0<<BLKSHIFT));
 
+	if((r = sys_page_alloc(0, addr, PTE_P|PTE_U|PTE_W)) < 0)
+		panic("fs cache: %e\n", r);
+	
+	if((r = ide_read(blockno*BLKSECTS, addr, BLKSECTS)) < 0)
+		panic("fs read: %e\n", r);
+
+	if((r = sys_page_map(0, addr, 0, addr, PTE_P|PTE_U|PTE_W)) < 0)
+		panic("fs clear dirty bit: %e\n", r);
+		
 	// Check that the block we read was allocated. (exercise for
 	// the reader: why do we do this *after* reading the block
 	// in?)
@@ -73,8 +82,19 @@ flush_block(void *addr)
 	if (addr < (void*)DISKMAP || addr >= (void*)(DISKMAP + DISKSIZE))
 		panic("flush_block of bad va %08x", addr);
 
+
 	// LAB 5: Your code here.
-	panic("flush_block not implemented");
+	int r;
+	addr = (void *)(((uintptr_t)addr)&(~0<<BLKSHIFT));
+
+	if(!va_is_mapped(addr) || !va_is_dirty(addr))
+		return;
+
+	if((r = ide_write(blockno*BLKSECTS, addr, BLKSECTS)) < 0)
+		panic("fs write: %e\n", r);
+
+	if((r = sys_page_map(0, addr, 0, addr, PTE_P|PTE_U|PTE_W)) < 0)
+		panic("fs clear dirty bit: %e\n", r);
 }
 
 // Test that the block cache works, by smashing the superblock and

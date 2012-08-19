@@ -11,6 +11,7 @@
 // Bytes per file system block - same as page size
 #define BLKSIZE		PGSIZE
 #define BLKBITSIZE	(BLKSIZE * 8)
+#define BLKSHIFT		12		// log2(BLKSIZE)
 
 // Maximum size of a filename (a single path component), including null
 // Must be a multiple of 4

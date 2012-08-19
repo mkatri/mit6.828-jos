@@ -25,6 +25,7 @@ struct Command {
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
+	{ "backtrace", "Print out kernel stack trace", mon_backtrace},
 };
 #define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
 
@@ -57,12 +58,38 @@ mon_kerninfo(int argc, char **argv, struct Trapframe *tf)
 	return 0;
 }
 
+static void backtrace_no_frame(uint32_t *ebp)
+{
+        struct Eipdebuginfo info;
+
+       	while(ebp){ 
+        uintptr_t eip = *(ebp+1);
+
+        cprintf("  ebp %08x  eip %08x  args %08x %08x %08x %08x %08x\n", 
+                ebp, eip, 
+                *(ebp+2), *(ebp+3), *(ebp+4), *(ebp+5), *(ebp+6), *(ebp+7));
+        debuginfo_eip(eip, &info);
+        cprintf("      %s:%d: %.*s+%d\n", 
+                info.eip_file, info.eip_line, 
+                info.eip_fn_namelen, info.eip_fn_name, eip - info.eip_fn_addr);
+        ebp = (uint32_t *)*ebp;
+	}
+}
+
 int
 mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 {
-	// Your code here.
+        cprintf("Stack backtrace:\n");
+	if(tf == NULL){
+		backtrace_no_frame((uint32_t *) read_ebp());
+		return 0;
+	}else{
+		backtrace_no_frame((uint32_t *) tf->tf_regs.reg_ebp);
+	}
+
 	return 0;
 }
+
 
 
 

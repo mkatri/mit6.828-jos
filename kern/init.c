@@ -67,7 +67,7 @@ i386_init(void)
 	//ENV_CREATE(user_primes, ENV_TYPE_USER);
 //	for(i = 0; i < 5; i++)
 //		ENV_CREATE(user_yield, ENV_TYPE_USER);
-	ENV_CREATE(user_faultread, ENV_TYPE_USER);
+	ENV_CREATE(user_primes, ENV_TYPE_USER);
 #endif // TEST*
 
 //	panic("do not go into sched\n");

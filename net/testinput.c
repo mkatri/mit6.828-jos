@@ -104,7 +104,6 @@ umain(int argc, char **argv)
 			panic("Unexpected IPC %d", req);
 
 		hexdump("input: ", pkt->jp_data, pkt->jp_len);
-		cprintf("\n");
 
 		// Only indicate that we're waiting for packets once
 		// we've received the ARP reply

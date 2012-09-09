@@ -26,12 +26,12 @@ pgfault(struct UTrapframe *utf)
 
 	// LAB 4: Your code here.
 	if((err & FEC_WR) != FEC_WR)
-		panic("pgfault\n");
+		panic("pgfault on read access\n");
 
 	uintptr_t fault_va = ROUNDDOWN((uintptr_t) addr, PGSIZE);
 	pte_t pte = vpt[PGNUM(fault_va)];
 	if(!(pte & PTE_P) || !(pte & PTE_COW))
-		panic("pgfault\n");
+		panic("pgfault on non cow\n");
 	// Allocate a new page, map it at a temporary location (PFTEMP),
 	// copy the data from the old page to the new page, then move the new
 	// page to the old page's address.

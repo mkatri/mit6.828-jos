@@ -132,6 +132,5 @@ sys_netpacket_send(void *addr, size_t length)
 int
 sys_netpacket_recv(void *addr, size_t buffsize)
 {
-//	return syscall(SYS_netpacket_recv, 1, (uint32_t)addr, buffsize, 0, 0, 0);
-return -1;
+	return syscall(SYS_netpacket_recv, 0, (uint32_t)addr, buffsize, 0, 0, 0);
 }

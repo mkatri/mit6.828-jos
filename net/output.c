@@ -19,7 +19,6 @@ output(envid_t ns_envid)
 		if(eid != ns_envid)
 			continue;
 */
-		cprintf("sending pakcet\n");
 		while(sys_netpacket_send(nsipcbuf.pkt.jp_data, nsipcbuf.pkt.jp_len) < 0)
 			sys_yield();
 	}

@@ -12,6 +12,7 @@
 #include <kern/console.h>
 #include <kern/sched.h>
 #include <kern/time.h>
+#include <kern/e1000.h>
 
 // Print a string to the system console.
 // The string is exactly 'len' characters long.
@@ -418,7 +419,19 @@ static int
 sys_time_msec(void)
 {
 	// LAB 6: Your code here.
-	panic("sys_time_msec not implemented");
+	return time_msec();
+}
+
+static int
+sys_netpacket_send(void * addr, size_t length){
+	user_mem_assert(curenv, addr, length, PTE_U);
+	return e1000_transmit(addr, length);
+}
+
+static int
+sys_netpacket_recv(void * addr, size_t bufflength){
+	user_mem_assert(curenv, addr, bufflength, PTE_U|PTE_W);
+	return e1000_receive(addr, bufflength);
 }
 
 // Dispatches to the correct kernel function, passing the arguments.
@@ -459,6 +472,12 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		return sys_ipc_try_send((envid_t) a1, (uint32_t) a2, (void *) a3, (unsigned) a4);
 	case SYS_env_set_trapframe:
 		return sys_env_set_trapframe((envid_t) a1, (struct Trapframe *)a2);
+	case SYS_time_msec:
+		return sys_time_msec();
+	case SYS_netpacket_send:
+		return sys_netpacket_send((void *) a1, (size_t) a2);
+	case SYS_netpacket_recv:
+		return sys_netpacket_recv((void *) a1, (size_t) a2);
 	default:
 		return -E_INVAL;
 	}

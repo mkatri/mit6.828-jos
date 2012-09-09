@@ -436,6 +436,30 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 	}
 }
 
+// Map the next *size* of upper virtual address space to physical [pa, pa+size)
+// in the page table rooted at pgdir.  Size is a multiple of PGSIZE.
+// This function is rather dangerous, violates kernel phsyical memory mapping
+// Use permission bits perm|PTE_P for the entries.
+//
+uintptr_t
+mmio_map_region(pde_t *pgdir, physaddr_t pa, size_t size, int perm)
+{
+	static uintptr_t limit = IOMEMBASE;
+	uintptr_t va = limit-size;
+	if(va <= KERNBASE)
+		panic("out of I/O va space\n");
+
+	while(va < limit){
+		pte_t* pgte = pgdir_walk(pgdir, (void *)va, 1);
+		*pgte = perm | PTE_P | (pa - PGOFF(va));
+		va += PGSIZE;
+		pa += PGSIZE;
+	}
+
+	limit -= size;
+	return limit;
+}
+
 //
 // Map the physical page 'pp' at virtual address 'va'.
 // The permissions (the low 12 bits) of the page table entry

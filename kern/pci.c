@@ -30,6 +30,8 @@ struct pci_driver pci_attach_class[] = {
 
 // pci_attach_vendor matches the vendor ID and device ID of a PCI device
 struct pci_driver pci_attach_vendor[] = {
+	{PCI_VID_INTEL, PCI_PID_82540EMA, &e1000_pci_attach},
+	{PCI_VID_INTEL, PCI_PID_82540EMA_M, &e1000_pci_attach},
 	{ 0, 0, 0 },
 };
 

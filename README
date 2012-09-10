@@ -1,0 +1,26 @@
+My implementation of JOS operating system as taught in MIT's 6.828:Operating System Engineering labs.
+
+JOS is a UNIX®-like OS (implements e.g., fork, exec), but is implemented in an exokernel style (i.e., the UNIX® functions are implemented mostly as user-level library instead of built-in to the kernel). This implementation JOS includes:
+
+-Booting
+-Multi processor support
+-Memory Management (paging enabled)
+-User-level Environments
+-Preemptive Multitasking (single user)
+-File System and Spawn
+-Network Stack (lwip + e1000 driver)
+
+As well as the following applications:
+-A shell (in progress)
+-Simple HTTP server
+
+The course materials provide a skeleton code for pieces of JOS, I have setup a branch for each lab before coding my implementations.
+
+This JOS implementation is for a standard x86-based personal computer. 
+To simplify development, a version of QEMU emulator modified at MIT was used for development and debugging. Make scripts build JOS and run it in QEMU.
+
+The course page at MIT's Open Courseware website:
+http://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-828-operating-system-engineering-fall-2006/index.htm
+
+I have updated the code with latest modifications from:
+http://pdos.csail.mit.edu/6.828/2011 
